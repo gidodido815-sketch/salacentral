@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Mapa Operativo Policial · D.G.C Santiago del Estero</title>
+
+<!-- Leaflet para mapas -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+<!-- Tipografía -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Estilos locales -->
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <button id="menuBtn">☰</button>
+  <div id="brand">
+    <img id="crest" src="img/escudo.png" alt="D.G.C">
+    <div>
+      <h1>Mapa Operativo Policial</h1>
+      <span>Santiago del Estero · Dpto. Central de Comunicaciones</span>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="stat"><b id="stComis">—</b><small>Dependencias</small></div>
+  <div class="stat"><b id="stCam">—</b><small>Cámaras</small></div>
+  <div class="stat"><b>19</b><small>D.S.C</small></div>
+  <button id="adminBtn"><span>🔒</span><span id="adminBtnTx">Admin</span></button>
+</div>
+<div class="tag-admin" id="adminTag">● MODO ADMINISTRADOR</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <button id="sbClose">✕</button>
+    
+    <!-- BÚSQUEDA -->
+    <div id="searchWrap">
+      <div class="searchbox">
+        <input id="q" type="text" autocomplete="off" placeholder="Buscar dirección (ej: Eduardo Miguel 863)…" spellcheck="false">
+        <button id="goBtn">➜</button>
+        <div id="results"></div>
+      </div>
+      <div class="hint">Escribí cualquier <b>dirección</b> y tocá el resultado para ubicarla en el mapa.</div>
+    </div>
+
+    <!-- ADMIN BAR -->
+    <div id="adminBar">
+      <button class="abtn" id="aAdd">＋ Agregar punto</button>
+      <button class="abtn" id="aExport">⬇ Exportar bloques</button>
+      <button class="abtn" id="aImport">⬆ Importar bloque</button>
+      <input type="file" id="aFile" accept=".js,.json" style="display:none">
+    </div>
+
+    <!-- PANEL -->
+    <div id="panel">
+      <div id="resultArea"></div>
+      
+      <div class="section-t">Capas Disponibles</div>
+      
+      <!-- Zonas (siempre visible) -->
+      <div class="toggle on" data-layer="zones">
+        <div class="dot" style="background:linear-gradient(135deg,#f57c00,#283593)"></div>
+        <div class="lbl">Zonas D.S.C</div>
+        <div class="sw"></div>
+      </div>
+      
+      <!-- Comisarías (siempre visible) -->
+      <div class="toggle on" data-layer="comis">
+        <div class="dot" style="background:var(--gold)"></div>
+        <div class="lbl">Comisarías</div>
+        <span class="ct" id="ctComis"></span>
+        <div class="sw"></div>
+      </div>
+      
+      <!-- Sub-Comisarías (solo usuarios + admin) -->
+      <div class="toggle" data-layer="subcomis">
+        <div class="dot" style="background:#ff4444"></div>
+        <div class="lbl">Sub-Comisarías (usuario)</div>
+        <div class="sw"></div>
+      </div>
+      
+      <!-- Casillas (solo usuarios + admin) -->
+      <div class="toggle" data-layer="casillas">
+        <div class="dot" style="background:#00aa00"></div>
+        <div class="lbl">Casillas (usuario)</div>
+        <div class="sw"></div>
+      </div>
+      
+      <!-- Garitas (solo usuarios + admin) -->
+      <div class="toggle" data-layer="garitas">
+        <div class="dot" style="background:#ff9900"></div>
+        <div class="lbl">Garitas (usuario)</div>
+        <div class="sw"></div>
+      </div>
+      
+      <!-- Destacamentos (solo usuarios + admin) -->
+      <div class="toggle" data-layer="dsto">
+        <div class="dot" style="background:#9900ff"></div>
+        <div class="lbl">Destacamentos (usuario)</div>
+        <div class="sw"></div>
+      </div>
+      
+      <!-- Cámaras (siempre visible) -->
+      <div class="toggle" data-layer="cam">
+        <div class="dot" style="background:var(--ok)"></div>
+        <div class="lbl">Cámaras de seguridad</div>
+        <span class="ct" id="ctCam"></span>
+        <div class="sw"></div>
+      </div>
+      
+      <div class="section-t" style="margin-top:20px">Distritos de Seguridad Ciudadana</div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </aside>
+
+  <!-- MAPA -->
+  <div id="map"></div>
+</div>
+
+<!-- MODAL: Login Admin -->
+<div class="modal-bg" id="loginModal">
+  <div class="modal">
+    <h3>Acceso administrador</h3>
+    <p>Ingresá la clave para habilitar edición completa. Solo el administrador puede modificar datos.</p>
+    <label>Clave</label>
+    <input type="password" id="pwd" placeholder="••••••••">
+    <div class="err" id="pwdErr"></div>
+    <div class="mrow">
+      <button class="mb-ghost" id="loginCancel">Cancelar</button>
+      <button class="mb-primary" id="loginOk">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Agregar Punto -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h3>Nuevo punto</h3>
+    <p>La ubicación se toma del lugar marcado en el mapa.</p>
+    <label>Dependencia</label>
+    <input id="eDep" placeholder="CRIA Nº 00 …">
+    <label>Tipo</label>
+    <select id="eTipo">
+      <option>COMISARIA</option>
+      <option>SUB_COMISARIA</option>
+      <option>CASILLA</option>
+      <option>GARITA</option>
+      <option>DESTACAMENTO</option>
+    </select>
+    <label>D.S.C (Nº 1-19)</label>
+    <input id="eDsc" placeholder="1 … 19">
+    <label>Teléfono</label>
+    <input id="eTel" placeholder="385…">
+    <label>Dirección</label>
+    <input id="eDir" placeholder="Calle y número">
+    <div class="mrow">
+      <button class="mb-ghost" id="editCancel">Cancelar</button>
+      <button class="mb-primary" id="editSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS: LIBRERÍAS EXTERNAS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+
+<!-- SCRIPTS: BLOQUES DE DATOS -->
+<script src="data/etiquetas.js"></script>
+<script src="data/comisarias.js"></script>
+<script src="data/zonas.js"></script>
+<script src="data/directorio.js"></script>
+<script src="data/camaras.js"></script>
+
+<!-- SCRIPTS: BLOQUES DE CÓDIGO (ORDEN IMPORTANTE) -->
+<script src="js/01-config.js"></script>
+<script src="js/02-iconos.js"></script>
+<script src="js/03-mapa.js"></script>
+<script src="js/04-capas-mejorado.js"></script>
+<script src="js/05-busqueda.js"></script>
+<script src="js/06-admin-permisos.js"></script>
+<script src="js/08-gps-ubicacion.js"></script>
+<script src="js/09-usuarios-login.js"></script>
+<script src="js/07-init-mejorado.js"></script>
+
+</body>
+</html>
